@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MAC → IPv6 Link-Local (EUI-64) Calculator</title>
+
+    <style>
+      /* --- Global Styles --- */
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        background: #f4f7f6;
+        color: #333;
+        margin: 0;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        background: #ffffff;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      }
+
+      /* --- Disclaimer Banner --- */
+      .banner {
+        background: #fff5f5;
+        border: 1px solid #fc8181;
+        border-left: 6px solid #e53e3e;
+        padding: 15px 20px;
+        margin-bottom: 25px;
+        border-radius: 4px;
+        color: #2d3748;
+      }
+
+      .banner h2 {
+        margin-top: 0;
+        margin-bottom: 8px;
+        color: #c53030;
+        font-size: 1.2em;
+        border-bottom: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .banner p {
+        margin: 5px 0;
+        font-size: 0.95em;
+        line-height: 1.5;
+      }
+
+      /* --- Tool Styles --- */
+      h1 {
+        margin-top: 0;
+        color: #2c3e50;
+        text-align: center;
+      }
+      h2 {
+        border-bottom: 2px solid #eee;
+        padding-bottom: 10px;
+        margin-top: 30px;
+        font-size: 1.2em;
+        color: #555;
+      }
+
+      .input-group {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      input[type="text"] {
+        width: 100%;
+        max-width: 400px;
+        padding: 12px;
+        font-size: 18px;
+        border: 2px solid #ddd;
+        border-radius: 4px;
+        font-family: monospace;
+        text-align: center;
+      }
+
+      .helper-text {
+        text-align: center;
+        color: #777;
+        font-size: 0.9em;
+        margin-bottom: 10px;
+      }
+
+      .error-text {
+        text-align: center;
+        color: #c0392b;
+        font-size: 0.9em;
+        margin-bottom: 10px;
+      }
+
+      /* --- Binary Visualization --- */
+      .binary-display {
+        font-family: "Courier New", monospace;
+        font-size: 1.1em;
+        letter-spacing: 2px;
+        background: #2c3e50;
+        color: #fff;
+        padding: 15px;
+        border-radius: 4px;
+        text-align: center;
+        margin-bottom: 10px;
+        overflow-x: auto;
+      }
+      .binary-display span {
+        opacity: 0.4;
+      }
+      .binary-display span.on {
+        opacity: 1;
+        color: #ff6b6b;
+        font-weight: bold;
+      }
+
+      .details {
+        font-size: 0.95em;
+        line-height: 1.5;
+      }
+
+      code {
+        background: #f1f5f9;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.95em;
+      }
+
+      /* --- Quick Commands --- */
+      .commands-container {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 15px;
+        margin-top: 10px;
+      }
+
+      .command-block {
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 10px 12px;
+        background: #f8fafc;
+      }
+
+      .command-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        font-size: 0.95em;
+        color: #4a5568;
+      }
+
+      .command-label {
+        font-weight: 600;
+      }
+
+      .command-note {
+        font-size: 0.8em;
+        color: #718096;
+      }
+
+      textarea.command-text {
+        width: 100%;
+        border-radius: 4px;
+        border: 1px solid #cbd5e0;
+        padding: 6px 8px;
+        font-family: monospace;
+        font-size: 0.95em;
+        resize: none;
+        background: #fff;
+      }
+
+      .btn-copy {
+        padding: 4px 10px;
+        font-size: 0.85em;
+        border-radius: 4px;
+        border: none;
+        background: #3182ce;
+        color: #fff;
+        cursor: pointer;
+      }
+
+      .btn-copy:hover {
+        background: #2b6cb0;
+      }
+
+      .copy-status {
+        font-size: 0.8em;
+        color: #3182ce;
+        margin-left: 8px;
+      }
+
+      .status-line {
+        margin-top: 10px;
+        font-size: 0.95em;
+      }
+
+      .status-ok {
+        color: #27ae60;
+        font-weight: 600;
+      }
+
+      .status-warn {
+        color: #c0392b;
+        font-weight: 600;
+      }
+
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="banner">
+        <h2>⚠️ Use at Your Own Risk</h2>
+        <p>
+          <strong>This tool is an unofficial IPv6 helper.</strong> It derives an
+          IPv6 link-local address from a MAC address using the EUI-64 method.
+        </p>
+        <p>
+          <strong
+            >Always verify results on the actual device and with official
+            documentation</strong
+          >
+          before making configuration changes or relying on connectivity
+          assumptions. The author assumes no liability for misconfiguration,
+          downtime, or any resulting damage.
+        </p>
+      </div>
+
+      <h1>MAC → IPv6 Link-Local (EUI-64) Calculator</h1>
+      <p style="text-align: center; color: #666">
+        Enter a MAC address to derive the corresponding
+        <strong>fe80::/64</strong> link-local IPv6 address.
+      </p>
+
+      <div class="input-group">
+        <input
+          id="macInput"
+          type="text"
+          placeholder="Enter MAC (e.g. 00-1A-2B-3C-4D-5E)"
+          oninput="calculateFromMac()"
+          autocomplete="off"
+        />
+      </div>
+      <div class="helper-text">
+        Accepted formats: <code>00-1A-2B-3C-4D-5E</code>,
+        <code>00:1A:2B:3C:4D:5E</code>, <code>001A.2B3C.4D5E</code>,
+        <code>001A2B3C4D5E</code>.
+      </div>
+      <div id="errorText" class="error-text hidden"></div>
+
+      <div id="resultSection" class="hidden">
+        <h2>Derived Addresses</h2>
+        <div class="details">
+          <p>
+            Normalized MAC:
+            <code id="normalizedMac"></code>
+          </p>
+          <p>
+            IPv6 Link-Local Address:
+            <code id="ipv6Address"></code>
+          </p>
+          <p class="status-line">
+            <span class="status-ok">Note:</span>
+            In real systems, multiple link-local addresses may exist; use
+            <code>ipconfig</code>/<code>ip addr</code> to confirm.
+          </p>
+        </div>
+
+        <h2>Quick Commands</h2>
+        <div class="commands-container">
+          <div class="command-block">
+            <div class="command-header">
+              <span class="command-label">Ping (IPv6 link-local)</span>
+              <span class="command-note"
+                >Replace <code>&lt;interface&gt;</code> with your adapter name
+                or index.</span
+              >
+            </div>
+            <textarea
+              id="pingCommand"
+              class="command-text"
+              rows="2"
+              readonly
+            ></textarea>
+            <div style="margin-top: 6px; display: flex; align-items: center">
+              <button class="btn-copy" onclick="copyCommand('pingCommand')">
+                Copy ping command
+              </button>
+              <span id="pingCopyStatus" class="copy-status hidden">Copied</span>
+            </div>
+          </div>
+
+          <div class="command-block">
+            <div class="command-header">
+              <span class="command-label">SSH (user: Administrator)</span>
+            </div>
+            <textarea
+              id="sshCommand"
+              class="command-text"
+              rows="2"
+              readonly
+            ></textarea>
+            <div style="margin-top: 6px; display: flex; align-items: center">
+              <button class="btn-copy" onclick="copyCommand('sshCommand')">
+                Copy ssh command
+              </button>
+              <span id="sshCopyStatus" class="copy-status hidden">Copied</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function calculateFromMac() {
+        const macInput = document.getElementById("macInput");
+        const errorText = document.getElementById("errorText");
+        const resultSection = document.getElementById("resultSection");
+
+        const normalizedMacElement = document.getElementById("normalizedMac");
+        const ipv6AddressElement = document.getElementById("ipv6Address");
+
+        const pingCommandElement = document.getElementById("pingCommand");
+        const sshCommandElement = document.getElementById("sshCommand");
+
+        // Reset copy status indicators
+        hideCopyStatus("pingCopyStatus");
+        hideCopyStatus("sshCopyStatus");
+
+        let macRaw = macInput.value.trim();
+
+        if (!macRaw) {
+          errorText.classList.add("hidden");
+          resultSection.classList.add("hidden");
+          return;
+        }
+
+        // Strip all non-hex characters
+        const hexOnly = macRaw.replace(/[^0-9a-fA-F]/g, "").toUpperCase();
+
+        if (hexOnly.length !== 12) {
+          errorText.textContent =
+            "Invalid MAC format. Expected 12 hexadecimal characters in total.";
+          errorText.classList.remove("hidden");
+          resultSection.classList.add("hidden");
+          return;
+        }
+
+        errorText.classList.add("hidden");
+
+        // Split into 6 bytes
+        const bytes = [];
+        for (let i = 0; i < 12; i += 2) {
+          const byteString = hexOnly.slice(i, i + 2);
+          const byteValue = parseInt(byteString, 16);
+          bytes.push(byteValue);
+        }
+
+        // Normalized MAC with colons
+        const normalizedMac = bytes
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join(":");
+
+        // Flip the universal/local bit (bit 1) in the first octet
+        const modifiedBytes = [...bytes];
+        modifiedBytes[0] = modifiedBytes[0] ^ 0x02;
+
+        const modifiedMac = modifiedBytes
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join(":");
+
+        // Build EUI-64 interface ID: flip U/L bit already done above
+        // EUI-64: first 3 bytes, FF, FE, last 3 bytes
+        const eui64Bytes = [
+          modifiedBytes[0],
+          modifiedBytes[1],
+          modifiedBytes[2],
+          0xff,
+          0xfe,
+          modifiedBytes[3],
+          modifiedBytes[4],
+          modifiedBytes[5],
+        ];
+
+        // Convert to 4 x 16-bit groups for interface ID
+        const interfaceIdSegments = [];
+        for (let i = 0; i < 8; i += 2) {
+          const segment = (eui64Bytes[i] << 8) | eui64Bytes[i + 1];
+          interfaceIdSegments.push(segment);
+        }
+
+        const interfaceIdExpanded = interfaceIdSegments
+          .map((seg) => seg.toString(16).padStart(4, "0"))
+          .join(":");
+
+        // Build full IPv6 link-local address: fe80::/64 + interface ID
+        const fullSegments = [
+          0xfe80,
+          0x0000,
+          0x0000,
+          0x0000,
+          interfaceIdSegments[0],
+          interfaceIdSegments[1],
+          interfaceIdSegments[2],
+          interfaceIdSegments[3],
+        ];
+
+        const ipv6Compressed = compressIpv6(fullSegments);
+
+        // Update DOM
+        normalizedMacElement.textContent = normalizedMac;
+        ipv6AddressElement.textContent = ipv6Compressed;
+
+        // Prepare commands (with placeholder interface)
+        const hostWithZone = ipv6Compressed;
+        pingCommandElement.value = `ping -6 ${hostWithZone}`;
+        sshCommandElement.value = `ssh Administrator@${hostWithZone}`;
+
+        resultSection.classList.remove("hidden");
+      }
+
+      function compressIpv6(segments) {
+        // segments: array of 8 16-bit numbers
+        const hextets = segments.map((seg) => seg.toString(16));
+
+        // Find longest run of zeros
+        let bestStart = -1;
+        let bestLength = 0;
+        let currentStart = -1;
+        let currentLength = 0;
+
+        for (let i = 0; i < hextets.length; i++) {
+          if (hextets[i] === "0") {
+            if (currentStart === -1) {
+              currentStart = i;
+              currentLength = 1;
+            } else {
+              currentLength++;
+            }
+          } else {
+            if (currentLength > bestLength) {
+              bestStart = currentStart;
+              bestLength = currentLength;
+            }
+            currentStart = -1;
+            currentLength = 0;
+          }
+        }
+
+        if (currentLength > bestLength) {
+          bestStart = currentStart;
+          bestLength = currentLength;
+        }
+
+        // Only compress if run is at least two hextets
+        if (bestLength < 2) {
+          return hextets.map(stripLeadingZeros).join(":");
+        }
+
+        const left = hextets
+          .slice(0, bestStart)
+          .map(stripLeadingZeros)
+          .join(":");
+        const right = hextets
+          .slice(bestStart + bestLength)
+          .map(stripLeadingZeros)
+          .join(":");
+
+        if (left && right) {
+          return left + "::" + right;
+        } else if (!left && right) {
+          return "::" + right;
+        } else if (left && !right) {
+          return left + "::";
+        } else {
+          return "::";
+        }
+      }
+
+      function stripLeadingZeros(hextet) {
+        const stripped = hextet.replace(/^0+/, "");
+        return stripped === "" ? "0" : stripped;
+      }
+
+      function copyCommand(textareaId) {
+        const textarea = document.getElementById(textareaId);
+        const statusId =
+          textareaId === "pingCommand" ? "pingCopyStatus" : "sshCopyStatus";
+        const statusElement = document.getElementById(statusId);
+
+        if (!textarea || !navigator.clipboard) {
+          return;
+        }
+
+        navigator.clipboard
+          .writeText(textarea.value)
+          .then(() => {
+            statusElement.classList.remove("hidden");
+            setTimeout(() => {
+              statusElement.classList.add("hidden");
+            }, 1500);
+          })
+          .catch(() => {
+            // Ignore errors silently; no UX spam
+          });
+      }
+
+      function hideCopyStatus(statusId) {
+        const el = document.getElementById(statusId);
+        if (el) {
+          el.classList.add("hidden");
+        }
+      }
+    </script>
+  </body>
+</html>
