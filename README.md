@@ -22,3 +22,5 @@ MAC to IPV6 Converter, a simple web-based tool for creating a local link address
 ## Getting Started
 
 Visit the live tool here: [MAC to IPV6 Converter](https://benhar-dev.github.io/helper-mac-to-ipv6/)
+
+AI can use the tool by calling [cloudflare-mac-address-converter.github-00a.workers.dev?mac=00-1A-2B-3C-4D-5E](https://cloudflare-mac-address-converter.github-00a.workers.dev/?mac=00-1A-2B-3C-4D-5E) and replacing the mac parameter with the parameter to be converted.
